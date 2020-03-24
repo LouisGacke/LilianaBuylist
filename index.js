@@ -8,12 +8,12 @@ getListByUser();
 
 //initially find select card if we have already bought from them and cost is < £0.9 diffence than cheapest.
 //next try build a % into how many cards a user has on offer and use them if % meets threshold.
-// create 30x shuffled arrays and try algorithm and pick best.
+// create 10000x shuffled arrays and try algorithm and pick best.
 var optimiseResults = (cardMap) =>
 {
   var currentBestBuyList;
-  //console.log(cardMap);
-  for(var i = 0; i < 100; i++)
+  console.log(cardMap);
+  for(var i = 0; i < 10000; i++)
   {
     var shuffled = shuffledMap(cardMap);
     var buyListResult = generateGroupedBuyList(shuffled);
@@ -26,11 +26,29 @@ var optimiseResults = (cardMap) =>
       currentBestBuyList = buyListResult;
     }
   }
+
   cheapestEachCard(cardMap);
-  console.log(currentBestBuyList.buyList);
+  //console.log(currentBestBuyList.buyList);
+  for(var entry of currentBestBuyList.buyList.entries())
+  {
+    var key = entry[0];
+    var value = entry[1];
+    var totalPrice = 0.00;
+    console.log("\t"+key+" => ");
+    for (let index = 0; index < value.length; index++) 
+    {
+      let userOffers = value[index];
+      totalPrice += parseFloat(userOffers.price);
+      console.log("\t\tcard: "+userOffers.card+" , price : "+userOffers.price);
+    }
+    console.log("\t\t\tTotal price: "+(totalPrice+0.9));
+  }
+  
   console.log("Cost of buylist: £"+currentBestBuyList.price +" for "+cardMap.size+" cards, from "+currentBestBuyList.buyList.size+ " users.");
   console.log("Cards not available:");
   console.log(cardsNotAvailable);
+
+  cardsByFewerSellers(cardMap);
 }
 
 var shuffledMap = (cardMap) => 
@@ -56,7 +74,17 @@ var cheapestEachCard = (cardMap) =>
   {
     var key = entry[0];
     var value = entry[1];
-    buyList.set(value[0].user, [{card: key, price: value[0].price}]);
+    if (buyList.get(value[0].user) !== undefined)
+    {
+      var usersOffers = buyList.get(value[0].user);
+      usersOffers.push({card: key, price: value[0].price})
+      buyList.set(value[0].user, usersOffers);
+    }
+    else
+    {
+      buyList.set(value[0].user, [{card: key, price: value[0].price}]);
+    }
+    
     priceOfBuylist+=parseFloat(value[0].price);
   }
 
@@ -83,6 +111,8 @@ var cheapestEachCard = (cardMap) =>
     };
     postageForBuylist+=postage;
   }
+  console.log(buyList);
+  console.log(priceOfBuylist, postageForBuylist);
   console.log("Cost of Cheapest each card buylist: £"+(priceOfBuylist + postageForBuylist) +" for "+cardMap.size+" cards, from "+buyList.size+ " users.");
 }
 
@@ -101,7 +131,16 @@ var generateGroupedBuyList = (cardMap) =>
     if (value.length === 1)
     {
       //console.log("Must buy '" +key+ "' from "+value[0].user);
-      buyList.set(value[0].user, [{card: key, price: value[0].price}]);
+      if (buyList.get(value[0].user) !== undefined)
+      {
+        var usersOffers = buyList.get(value[0].user);
+        usersOffers.push({card: key, price: value[0].price});
+        buyList.set(value[0].user, usersOffers);
+      }
+      else
+      {
+        buyList.set(value[0].user, [{card: key, price: value[0].price}]);
+      }
       priceOfBuylist+=parseFloat(value[0].price);
     }
     else
@@ -137,7 +176,6 @@ var generateGroupedBuyList = (cardMap) =>
             bestValueOffer = value[i];
             bestValueOfferAmountOfCards = buyList.get(value[i].user).length+1
             bestValueOfferPostagePrice = postageVal;
-            break;
           }
         }
       }
@@ -155,28 +193,44 @@ var generateGroupedBuyList = (cardMap) =>
       buyList.set(bestValueOffer.user, userBuyList);
     }
   }
+  // console.log(buyList);
+  // search against buyers
   for(var entry of cardMap.entries())
   {
     var key = entry[0];
     //make sure the offers are in price order;
-    var value = entry[1].sort(compareOffers);
+    var value = entry[1];
+    // console.log(key);
+    // console.log(buyListRefined);
     //Only 1 offer for a card
     if (value.length === 1)
     {
       //console.log("Must buy '" +key+ "' from "+value[0].user);
-      buyListRefined.set(value[0].user, [{card: key, price: value[0].price}]);
+      if (buyListRefined.get(value[0].user) !== undefined)
+      {
+        var usersOffers = buyListRefined.get(value[0].user);
+        usersOffers.push({card: key, price: value[0].price});
+        buyListRefined.set(value[0].user, usersOffers);
+      }
+      else
+      {
+        buyListRefined.set(value[0].user, [{card: key, price: value[0].price}]);
+      }
+
       priceOfBuylistRefined+=parseFloat(value[0].price);
     }
     else
     {
       var bestValueOffer = value[0];
-      var bestValueOfferAmountOfCards = (buyListRefined.get(value[0].user) === undefined)? 1 : buyListRefined.get(value[0].user).length;
-      var bestValueOfferPostagePrice = (value[0].price >= 2.4)? 2.1 : 0.9;
+      var bestValueOfferAmountOfCards = (buyListRefined.get(value[0].user) === undefined)? 0 : buyListRefined.get(value[0].user).length;
+      // console.log("amount of cards from : "+value[0].user+" "+bestValueOfferAmountOfCards);
+      var bestValueOfferPostagePrice = (value[0].price >= 20)? 2.1 : 0.9;
       for (var i = 0; i < value.length; i++)
       {
         //if offer is from current seller
         if (buyListRefined.get(value[i].user) !== undefined)
         {
+          // console.log("already buying from seller: "+value[i].user);
           var postageVal = (bestValueOfferPostagePrice);
           if (postageVal !== 2.1)
           {
@@ -189,35 +243,42 @@ var generateGroupedBuyList = (cardMap) =>
           // if new potential sellers postage+cost is less than original best offer + cost
           var currentPrice = parseFloat(value[i].price);
           var bestPrice = parseFloat(bestValueOffer.price);
-          if (currentPrice + (postageVal / buyListRefined.get(value[i].user).length) < bestPrice +
-            (bestValueOfferPostagePrice / bestValueOfferAmountOfCards))
+          // console.log(""+currentPrice +" + "+ (""+postageVal / (buyListRefined.get(value[i].user).length+1)) +" < "+ bestPrice +" + "+
+          // (bestValueOfferPostagePrice / (bestValueOfferAmountOfCards+1)))
+          if (currentPrice + (postageVal / (buyListRefined.get(value[i].user).length +1)) < bestPrice +
+            (bestValueOfferPostagePrice / (bestValueOfferAmountOfCards+1)))
           {
+            // console.log("New best offer!");
             bestValueOffer = value[i];
-            bestValueOfferAmountOfCards = buyListRefined.get(value[i].user).length+1
-            bestValueOfferPostagePrice = postageVal;
-            break;
+            // bestValueOfferAmountOfCards = buyListRefined.get(value[i].user).length+1
+            // bestValueOfferPostagePrice = postageVal;
           }
         }
         else
         {
+          // console.log("New seller: "+value[i].user);
           // if offer is from a seller we have chosen in a previous iteration
           if (buyList.get(value[i].user) !== undefined)
           {
-            var postageVal = bestValueOfferPostagePrice;
+            // console.log("bought from seller in previous algorithm");
+            // console.log("amount of cards in previous algorithm from : "+value[i].user+" "+buyList.get(value[i].user).length);
+            var postageVal = bestValueOfferPostagePrice / buyList.get(value[i].user).length;
             // if new potential sellers postage+cost is less than original best offer + cost
             var currentPrice = parseFloat(value[i].price);
             var bestPrice = parseFloat(bestValueOffer.price);
+            // console.log(""+currentPrice +" + "+ (""+postageVal) +" < "+ bestPrice +" + "+
+              // (bestValueOfferPostagePrice / (bestValueOfferAmountOfCards+1)))
             if (currentPrice + (postageVal) < bestPrice +
-              (bestValueOfferPostagePrice / bestValueOfferAmountOfCards))
+              (bestValueOfferPostagePrice / (bestValueOfferAmountOfCards+1)))
             {
               bestValueOffer = value[i];
-              bestValueOfferAmountOfCards = 1
-              bestValueOfferPostagePrice = postageVal;
-              break;
+              // bestValueOfferAmountOfCards = 1
+              // bestValueOfferPostagePrice = postageVal;
             }
           }
         }
-      } 
+      }
+      // console.log("BEST VALUE : "+ bestValueOffer.user +" at: £"+ bestValueOffer.price); 
       var userBuyList = buyListRefined.get(bestValueOffer.user);
       if (userBuyList !== undefined)
       {
@@ -281,14 +342,120 @@ var generateGroupedBuyList = (cardMap) =>
   }
   console.log("Cost of buylist: £"+(priceOfBuylist + postageForBuylist) +" for "+cardMap.size+" cards, from "+buyList.size+ " users.");
   console.log("Cost of buylist Refined: £"+(priceOfBuylistRefined + postageForBuylistRefined) +" for "+cardMap.size+" cards, from "+buyListRefined.size+ " users.");
-  return (priceOfBuylist < priceOfBuylistRefined) ? {buyList: buyList, price: (priceOfBuylist + postageForBuylist)} : {buyList: buyListRefined, price: (priceOfBuylistRefined + postageForBuylistRefined)};
+  return ((priceOfBuylist + postageForBuylist) < (priceOfBuylistRefined + postageForBuylistRefined)) ? {buyList: buyList, price: (priceOfBuylist + postageForBuylist)} : {buyList: buyListRefined, price: (priceOfBuylistRefined + postageForBuylistRefined)};
 }
 
 //NEXT ALGORITHM
 // Map users who sell the most cards. start with single buyers. then fewest avail cards ++
 // Prioritise users who have more cards to lessen the buyers.
+function cardsByFewerSellers(cardMap)
+{
+  var cardCount = cardMap.size;
+  var buyList = new Map();
+  // console.log("Card Count: "+cardCount);
+  var i = 0 ;
+  while (i < cardCount && cardMap.size !== 0)
+  { 
+    i++;
+    // console.log(i);
+    var userMapFirst = cardMapToUserMap(cardMap);
+    // console.log(userMapFirst);
+    //find user with most cards
+    var mostCardsUser = userWithMostCardsInUserMap(userMapFirst);
+    // console.log("MOST CARD USER:");
+    // console.log(mostCardsUser);
+    buyList.set(mostCardsUser.user, mostCardsUser.cardMap);
+    //remove cards from card map
+    mostCardsUser.cardMap.forEach(offer => {
+      cardMap.delete(offer.card);
+    });
+  }
+  // console.log(buyList);
 
-// Basic algorithm to pick cheapest on each card and total price + shipping
+  //work out price
+  var allCardsCost = 0.00;
+  for(var entry of buyList.entries())
+  {
+    var key = entry[0];
+    var value = entry[1];
+    var totalPrice = 0.00;
+    console.log("\t"+key+" => ");
+    for (let index = 0; index < value.length; index++) 
+    {
+      let userOffers = value[index];
+      totalPrice += parseFloat(userOffers.price);
+      console.log("\t\tcard: "+userOffers.card+" , price : "+userOffers.price);
+    }
+    var postageCost = (value.length > 20) ? 1.95 : 0.9;
+    console.log("\t\t\tTotal price: "+(totalPrice+postageCost));
+    allCardsCost+= totalPrice+postageCost;
+  }
+
+  console.log("Cost of fewest user buylist: £"+(allCardsCost) +" for "+cardCount+" cards, from "+buyList.size+ " users.");
+
+}
+
+function cardMapToUserMap(cardMap)
+{
+  var userMap = new Map();
+  for(var entry of cardMap.entries())
+  {
+    var key = entry[0];
+    var value = entry[1];
+    for (var i = 0; i < value.length; i++)
+    {
+      if (userMap.get(value[i].user) !== undefined)
+      {
+        var userCardList = userMap.get(value[i].user);
+        if (userCardList !== undefined)
+        {
+          var cardAlreadyInList = false;
+          for(var j = 0; j < userCardList.length; j++)
+          {
+            if (userCardList[j].card === key)
+            {  
+              cardAlreadyInList = true;
+              break;
+            }
+          }
+          if (!cardAlreadyInList)
+          {
+            userCardList.push({card: key, price: value[i].price});
+            userMap.set(value[i].user, userCardList);
+          }
+        }
+      }
+      else
+      {
+        userMap.set(value[i].user, [{card: key, price: value[i].price}]);
+      }
+    }
+  }
+  return userMap;
+}
+
+function userWithMostCardsInUserMap(userMap)
+{
+  var mostCardsUser = {user : "", cardMap: []};
+  for (const entry of userMap.entries()) 
+  {
+    var key = entry[0];
+    var value = entry[1];
+    if (mostCardsUser.user === "")
+    {
+      mostCardsUser = {user: key, cardMap: value};
+    }
+    else
+    {
+      if (value.length > mostCardsUser.cardMap.length)
+      {
+        mostCardsUser = {user: key, cardMap: value}
+      }
+    }
+  }
+  return mostCardsUser;
+}
+
 
 function compareOffers(a, b)
 {
@@ -304,7 +471,7 @@ function compareOffers(a, b)
 async function getListByUser()
 {
   var fileName = "./inputlist.txt";
-  var i = 0;
+  var retreivedCards = 0;
   var file = fs.readFileSync(fileName);
   var lines = file.toString().split('\n');
   var cardCount = lines.length;
@@ -313,10 +480,12 @@ async function getListByUser()
   for(var i = 0; i < lines.length; i++) 
   {
     var formattedLine = lines[i].replace(/[\n\r]+/g, '');
+    var overridden = (formattedLine.includes("/")) ? true : false;
     await delay(500);
-    getOffers(formattedLine).then((cheapestArr) =>
+    getOffers(formattedLine, overridden).then((cheapestArr) =>
     // getOffers(formattedLine, (cheapestArr) =>
     {
+      retreivedCards++;
       cheapestArr.forEach(offer => 
         {
           if (cardMap.get(offer.itemOffered.name) !== undefined)
@@ -330,10 +499,12 @@ async function getListByUser()
             cardMap.set(offer.itemOffered.name, [{user:offer.seller.name, price: offer.price}]);
           }
         });
-        if (i === cardCount)
+        if (retreivedCards === cardCount)
         { 
+          console.log("retreivedCards: "+ retreivedCards + " cardCount: "+ cardCount);
           console.log("starting optimisation of buylist");
           optimiseResults(cardMap);
+
         }
     })
     .catch((error) =>
@@ -341,170 +512,10 @@ async function getListByUser()
       console.log(error);
     });
   }
-
-  // fs.readFileSync(fileName, async (err, data) =>
-  // {
-  //   if (!err)
-  //   {
-  //     var lines = data.toString().split('\n');
-  //     var cardCount = lines.length;
-  //     console.log("CardCount: "+cardCount);
-  //     var cardMap = new Map(); 
-  //     lines.forEach(async (line) => 
-  //     {
-  //       var formattedLine = line.replace(/[\n\r]+/g, '');
-  //       await delay(1000);
-  //       getOffers(formattedLine).then((cheapestArr) =>
-  //       {
-  //         cheapestArr.forEach(offer => 
-  //           {
-  //             if (cardMap.get(offer.itemOffered.name) !== undefined)
-  //             {
-  //               var cardList = cardMap.get(offer.itemOffered.name);
-  //               cardList.push({user: offer.seller.name, price: offer.price});
-  //               cardMap.set(offer.itemOffered.name, cardList);
-  //             }
-  //             else
-  //             {
-  //               cardMap.set(offer.itemOffered.name, [{user:offer.seller.name, price: offer.price}]);
-  //             }
-  //           });
-  //           i++;
-  //           if (i === cardCount)
-  //           {
-  //             optimiseResults(cardMap);
-  //           }
-  //       });
-  //     });
-      
-  //     // getRequest(cardNames);
-  //   }
-  // });
 }
 
-// function mapByCard(responses)
-// {
-//   console.log("responses");
-//   console.log(responses);
-//   for(response in responses)
-//   {
-//     console.log(response);
-//     break;
-//   }
-// }
 
-// function getRequest(cardNames)
-// {
-//   var responses = [];
-//   var completed_requests = 0; 
- 
-//   for(i in cardNames)
-//   {
-//     var formattedCardName = cardNames[i].toLowerCase().replace(/ /g, "-").replace(/'|,/g, "");
-//     var options = {
-//       host: 'lilianamarket.co.uk',
-//       port: 443,
-//       path: '/magic-cards/'+formattedCardName,
-//       headers: 
-//       {
-//           "Content-Type": "application/json"
-//       }
-//     };
-//     https.get(options, function(res) {
-//       var bodyChunks = [];
-
-//       res.on('data', function(chunk) {
-//         // You can process streamed parts here...
-//         bodyChunks.push(chunk);
-//       }).on('end', function() {
-//         var body = Buffer.concat(bodyChunks);
-//         var bodyStr = body.toString();
-//         // console.log(bodyStr);
-//         var offers = "{"+bodyStr.substring(bodyStr.lastIndexOf("\"offers\": ["), bodyStr.lastIndexOf("]"))+"]}";
-        
-//         try 
-//         {
-//           var jsonOffers = JSON.parse(offers);
-//           if (jsonOffers.offers.length === 0)
-//           {
-//             console.log("No offers found for: " + cardNames[i]);
-//           }
-//           var cheapest = new Array();
-//           jsonOffers.offers.forEach(offer => 
-//           {
-//             cheapest.push(offer);
-//           });
-//           responses.push(cheapest);
-//           completed_requests++;
-//           console.log("completeRequests: "+completed_requests);
-//           if (completed_requests === cardNames.length)
-//           {
-//             mapByCard(responses);
-//           }
-//         } 
-//         catch (error) 
-//         {
-//           console.log(error);
-//           console.log("ERROR could not find page for: "+cardNames[i]);
-//         }
-//       });
-//     });
-//   }
-// }
-
-// function getOffers(cardName, callback)
-// {
-//   var formattedCardName = cardName.toLowerCase().replace(/ /g, "-").replace(/'|,/g, "");
-//   var options = {
-//     host: 'lilianamarket.co.uk',
-//     port: 443,
-//     path: '/magic-cards/'+formattedCardName,
-//     headers: 
-//     {
-//         "Content-Type": "application/json"
-//     }
-//   };
-//   var req = https.get(options, function(res) {
-//     var bodyChunks = [];
-
-//     res.on('data', function(chunk) {
-//       // You can process streamed parts here...
-//       bodyChunks.push(chunk);
-//     }).on('end', function() {
-//       var body = Buffer.concat(bodyChunks);
-//       var bodyStr = body.toString();
-//       // console.log(bodyStr);
-//       var offers = "{"+bodyStr.substring(bodyStr.lastIndexOf("\"offers\": ["), bodyStr.lastIndexOf("]"))+"]}";
-      
-//       try 
-//       {
-//         console.log("Found: "+formattedCardName);
-//         var jsonOffers = JSON.parse(offers);
-//         if (jsonOffers.offers.length === 0)
-//         {
-//           console.log("No offers found for: " + cardName);
-//         }
-//         var cheapest = new Array();
-//         jsonOffers.offers.forEach(offer => 
-//         {
-//           cheapest.push(offer);
-//         });
-//         callback(cheapest);
-//       } 
-//       catch (error) 
-//       {
-//         console.log(error);
-//         console.log("ERROR could not find page for: "+cardName);
-//       }
-//     });
-    
-//   });
-//   req.on('error', function(e) {
-//     reject(console.log('ERROR: ' + e.message));
-//   });
-//   req.end();
-// }
-function getOffers(cardName)
+function getOffers(cardName, overridden)
 {
   return new Promise((resolve, reject) =>
   {
@@ -512,7 +523,7 @@ function getOffers(cardName)
     var options = {
       host: 'lilianamarket.co.uk',
       port: 443,
-      path: '/magic-cards/'+formattedCardName,
+      path: (!overridden)? '/magic-cards/'+formattedCardName : '/magic-card/'+formattedCardName,
       headers: 
       {
           "Content-Type": "application/json"
