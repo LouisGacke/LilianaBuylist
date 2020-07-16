@@ -6,7 +6,7 @@ const fs = require('fs');
 var cardsNotAvailable = [];
 getListByUser();
 
-//initially find select card if we have already bought from them and cost is < £0.9 diffence than cheapest.
+//initially find select card if we have already bought from them and cost is < £1 diffence than cheapest.
 //next try build a % into how many cards a user has on offer and use them if % meets threshold.
 // create 10000x shuffled arrays and try algorithm and pick best.
 var optimiseResults = (cardMap) =>
@@ -41,7 +41,7 @@ var optimiseResults = (cardMap) =>
       totalPrice += parseFloat(userOffers.price);
       console.log("\t\tcard: "+userOffers.card+" , price : "+userOffers.price);
     }
-    console.log("\t\t\tTotal price: "+(totalPrice+0.9));
+    console.log("\t\t\tTotal price: "+(totalPrice+1));
   }
   
   console.log("Cost of buylist: £"+currentBestBuyList.price +" for "+cardMap.size+" cards, from "+currentBestBuyList.buyList.size+ " users.");
@@ -94,7 +94,7 @@ var cheapestEachCard = (cardMap) =>
     var key = entry[0];
     var value = entry[1];
     var totalPriceFromUser = 0;
-    var postage = 0.9;
+    var postage = 1;
     for(var i = 0; i < value.length ; i++) 
     {
       if(value[i].price >= 20)
@@ -147,7 +147,7 @@ var generateGroupedBuyList = (cardMap) =>
     {
       var bestValueOffer = value[0];
       var bestValueOfferAmountOfCards = (buyList.get(value[0].user) === undefined)? 1 : buyList.get(value[0].user).length;
-      var bestValueOfferPostagePrice = (value[0].price >= 20)? 2.1 : 0.9;
+      var bestValueOfferPostagePrice = (value[0].price >= 20)? 2.1 : 1;
       if (buyList.get(value[0].user) !== undefined)
       {
         buyList.get(value[0].user).forEach(offer => {
@@ -160,7 +160,7 @@ var generateGroupedBuyList = (cardMap) =>
         // if offer is from current seller
         if (buyList.get(value[i].user) !== undefined)
         {
-          var postageVal = 0.9;
+          var postageVal = 1;
           buyList.get(value[i].user).forEach(offer => 
           {
             if (offer.price >= 20) postageVal = 2.1;
@@ -224,7 +224,7 @@ var generateGroupedBuyList = (cardMap) =>
       var bestValueOffer = value[0];
       var bestValueOfferAmountOfCards = (buyListRefined.get(value[0].user) === undefined)? 0 : buyListRefined.get(value[0].user).length;
       // console.log("amount of cards from : "+value[0].user+" "+bestValueOfferAmountOfCards);
-      var bestValueOfferPostagePrice = (value[0].price >= 20)? 2.1 : 0.9;
+      var bestValueOfferPostagePrice = (value[0].price >= 20)? 2.1 : 1;
       for (var i = 0; i < value.length; i++)
       {
         //if offer is from current seller
@@ -300,7 +300,7 @@ var generateGroupedBuyList = (cardMap) =>
     var key = entry[0];
     var value = entry[1];
     var totalPriceFromUser = 0;
-    var postage = 0.9;
+    var postage = 1;
     for(var i = 0; i < value.length ; i++) 
     {
       if(value[i].price >= 20)
@@ -323,7 +323,7 @@ var generateGroupedBuyList = (cardMap) =>
     var key = entry[0];
     var value = entry[1];
     var totalPriceFromUser = 0;
-    var postage = 0.9;
+    var postage = 1;
     for(var i = 0; i < value.length ; i++) 
     {
       if(value[i].price >= 20)
@@ -386,7 +386,7 @@ function cardsByFewerSellers(cardMap)
       totalPrice += parseFloat(userOffers.price);
       console.log("\t\tcard: "+userOffers.card+" , price : "+userOffers.price);
     }
-    var postageCost = (value.length > 20) ? 1.95 : 0.9;
+    var postageCost = (value.length > 20) ? 1.95 : 1;
     console.log("\t\t\tTotal price: "+(totalPrice+postageCost));
     allCardsCost+= totalPrice+postageCost;
   }
